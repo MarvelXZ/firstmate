@@ -2261,8 +2261,13 @@ conclude_task_no_mistakes_run() {  # <worktree>
 # The scan runs through fm_run_timed so a hang on an unreadable mount cannot
 # wedge teardown: a scan that misses the bound is a failure (REFUSED), never
 # a silently incomplete scan, which is why lsof -b (skip-blocking) is not used.
+# A non-positive bound is not a bound (fm-timeout-lib.sh): timeout 0 and perl
+# alarm 0 both turn the deadline off, and a padded zero such as 00 is still
+# zero, so the digit test alone would let the very hang this bound prevents
+# back in. Compare arithmetically, tolerating a value too large to compare.
 LSOF_CWD_SCAN_TIMEOUT=${FM_TEARDOWN_LSOF_TIMEOUT:-10}
-case "$LSOF_CWD_SCAN_TIMEOUT" in ''|*[!0-9]*|0) LSOF_CWD_SCAN_TIMEOUT=10 ;; esac
+case "$LSOF_CWD_SCAN_TIMEOUT" in ''|*[!0-9]*) LSOF_CWD_SCAN_TIMEOUT=10 ;; esac
+[ "$LSOF_CWD_SCAN_TIMEOUT" -gt 0 ] 2>/dev/null || LSOF_CWD_SCAN_TIMEOUT=10
 pids_with_cwd_under() {  # <dir>
   local dir=$1 out pid path line
   [ -n "$dir" ] && [ -d "$dir" ] || return 0
